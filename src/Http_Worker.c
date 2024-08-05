@@ -296,10 +296,6 @@ static void Http_SetCurlOpts(struct HttpRequest* req) {
 	_curl_easy_setopt(curl, CURLOPT_HEADERDATA,     req);
 	_curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION,  Http_ProcessData);
 	_curl_easy_setopt(curl, CURLOPT_WRITEDATA,      req);
-
-	if (curlVerbose) _curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
-
-	if (httpsVerify) return;
 	_curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0L);
 }
 
