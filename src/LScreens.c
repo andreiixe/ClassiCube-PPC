@@ -1495,8 +1495,6 @@ static void SettingsScreen_AddWidgets(struct SettingsScreen* s) {
 
 	LCheckbox_Add(s, &s->cbEmpty, "Show empty servers in list", 
 				SettingsScreen_ShowEmpty,  set_cbEmpty);
-	LCheckbox_Add(s, &s->cbScale, "Use display scaling", 
-				SettingsScreen_DPIScaling, set_cbScale);
 	LButton_Add(s,   &s->btnBack, 80, 35, "Back", 
 				SwitchToMain, set_btnBack);
 }
