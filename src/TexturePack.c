@@ -15,7 +15,10 @@
 #include "Logger.h"
 #include "Utils.h"
 #include "Chat.h" /* TODO avoid this include */
+#include <stdio.h>
 #include "Errors.h"
+#include <stdlib.h>
+#include <string.h>
 
 /* Simple fallback terrain for when no texture packs are available at all */
 static BitmapCol fallback_terrain[16 * 8] = {
@@ -569,20 +572,79 @@ cc_result TexturePack_ExtractCurrent(cc_bool forceReload) {
 	return res;
 }
 
-/* Extracts and updates cache for the downloaded texture pack */
-static void ApplyDownloaded(struct HttpRequest* item) {
-	struct Stream mem;
-	cc_string url;
+/*Definite PPC Functions*/
+// Define the proxy URL prefix
+#define PROXY_PREFIX "http://pikaiixe.duckdns.org:5090/?url="
 
-	url = String_FromRawArray(item->url);
-	if (!Platform_ReadonlyFilesystem) UpdateCache(item);
-	/* Took too long to download and is no longer active texture pack */
-	if (!String_Equals(&TexturePack_Url, &url)) return;
-
-	Stream_ReadonlyMemory(&mem, item->data, item->size);
-	ExtractFrom(&mem, &url);
-	usingDefault = false;
+// Define or adjust these utility functions based on your string library
+cc_string String_FromRawPPC(const char* raw_str) {
+    cc_string str;
+    str.length = strlen(raw_str);
+    str.buffer = malloc(str.length + 1);
+    strcpy(str.buffer, raw_str);
+    return str;
 }
+
+cc_string String_ConcatPPC(const cc_string* str1, const cc_string* str2) {
+    cc_string result;
+    result.length = str1->length + str2->length;
+    result.buffer = malloc(result.length + 1);
+    strcpy(result.buffer, str1->buffer);
+    strcat(result.buffer, str2->buffer);
+    return result;
+}
+
+void String_FreePPC(cc_string* str) {
+    free(str->buffer);
+    str->buffer = NULL;
+    str->length = 0;
+}
+
+int String_EqualsPPC(const cc_string* str1, const cc_string* str2) {
+    if (str1->length != str2->length) return 0;
+    int result = strcmp(str1->buffer, str2->buffer);
+    printf("String_EqualsPPC: %d (str1: %s, str2: %s)\n", result, str1->buffer, str2->buffer);
+    return result == 0;
+}
+
+
+cc_string String_FromRawArrayPPC(const char* raw_str) {
+    return String_FromRawPPC(raw_str);
+}
+
+
+/* Extracts and updates cache for the downloaded texture pack */
+void ApplyDownloaded(struct HttpRequest* item) {
+    printf("ApplyDownloaded called\n");
+
+    if (item == NULL) {
+        printf("HttpRequest item is NULL\n");
+        return;
+    }
+
+    printf("URL: %s\n", item->url ? item->url : "NULL");
+    printf("Size: %d\n", item->size);
+    if (item->data == NULL) {
+        printf("Data is NULL\n");
+        return;
+    }
+
+    struct Stream mem;
+    cc_string url = String_FromRawArray(item->url);
+
+    if (!Platform_ReadonlyFilesystem) {
+        UpdateCache(item);
+    }
+
+    Stream_ReadonlyMemory(&mem, item->data, item->size);
+    printf("Stream initialized\n");
+
+    cc_result res = ExtractFrom(&mem, &url);
+    printf("ExtractFrom result: %d\n", res);
+
+    usingDefault = false;
+}
+
 
 void TexturePack_CheckPending(void) {
 	struct HttpRequest item;
@@ -607,27 +669,42 @@ void TexturePack_CheckPending(void) {
 }
 
 /* Asynchronously downloads the given texture pack */
-static void DownloadAsync(const cc_string* url) {
-	cc_string etag = String_Empty;
-	cc_string time = String_Empty;
+void DownloadAsync(const cc_string* url) {
+    cc_string etag = String_Empty;
+    cc_string time = String_Empty;
 
-	/* Only retrieve etag/last-modified headers if the file exists */
-	/* This inconsistency can occur if user deleted some cached files */
-	if (IsCached(url)) {
-		time = GetCachedLastModified(url);
-		etag = GetCachedETag(url);
-	}
+    // Creează URL-ul complet
+    cc_string proxy_prefix = String_FromRawPPC(PROXY_PREFIX);
+    cc_string full_url = String_ConcatPPC(&proxy_prefix, url);
 
-	Http_TryCancel(TexturePack_ReqID);
-	TexturePack_ReqID = Http_AsyncGetDataEx(url, HTTP_FLAG_PRIORITY, &time, &etag, NULL);
+    printf("Full URL: %s\n", full_url.buffer);
+
+
+    String_FreePPC(&TexturePack_Url);
+    TexturePack_Url = full_url; 
+
+    if (TexturePack_Url.buffer == NULL) {
+        printf("Failed to allocate memory for TexturePack_Url\n");
+        return;
+    }
+
+    if (IsCached(&full_url)) {
+        time = GetCachedLastModified(&full_url);
+        etag = GetCachedETag(&full_url);
+    }
+
+    Http_TryCancel(TexturePack_ReqID);
+    TexturePack_ReqID = Http_AsyncGetDataEx(&full_url, HTTP_FLAG_PRIORITY, &time, &etag, NULL);
+
+    String_FreePPC(&proxy_prefix);
 }
 
 void TexturePack_Extract(const cc_string* url) {
-	if (url->length) DownloadAsync(url);
+    if (url->length) DownloadAsync(url);
 
-	if (String_Equals(url, &TexturePack_Url)) return;
-	String_Copy(&TexturePack_Url, url);
-	TexturePack_ExtractCurrent(false);
+    if (String_EqualsPPC(url, &TexturePack_Url)) return;
+
+    TexturePack_ExtractCurrent(false);
 }
 
 static struct TextureEntry* entries_head;
