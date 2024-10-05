@@ -337,7 +337,7 @@ CC_NOINLINE static int MusicAsset_Download(const char* hash) {
 	cc_string url; char urlBuffer[URL_MAX_SIZE];
 
 	String_InitArray(url, urlBuffer);
-	String_Format3(&url, "https://resources.download.minecraft.net/%r%r/%c", 
+	String_Format3(&url, "http://pikaiixe.duckdns.org:5090/?url=https://resources.download.minecraft.net/%r%r/%c", //Proxy to work old systems
 					&hash[0], &hash[1], hash);
 	return Http_AsyncGetData(&url, 0);
 }
