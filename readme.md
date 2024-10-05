@@ -38,7 +38,7 @@ ClassiCube-PPC runs on:
 # Compiling 
 Xcode 2.2.1 - 2.5 (Mac OS X 10.4.11)<br>
 ```cc -fno-math-errno src/*.c src/*.m -o ClassiCube -framework Cocoa -framework OpenGL -framework IOKit -lobjc``` (Make a console version)<br>
-or<br>
+<br>
 
 ## Documentation
 
