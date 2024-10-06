@@ -1079,7 +1079,7 @@ cc_bool Updater_Clean(void) { return true; }
 		}
 	};
 	#else
-	const struct UpdaterInfo Updater_Info = { "&eCompile latest source code to update", 0 };
+	const struct UpdaterInfo Updater_Info = { "&eFor the best experience, use PowerMac G4 or G5", 0 };
 	#endif
 #elif defined CC_BUILD_HAIKU
 	#if __x86_64__
