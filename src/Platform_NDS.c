@@ -17,6 +17,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <time.h>
+#include <nds/arm9/background.h>
 #include <nds/bios.h>
 #include <nds/cothread.h>
 #include <nds/interrupts.h>
@@ -25,6 +26,7 @@
 #include <nds/system.h>
 #include <nds/arm9/dldi.h>
 #include <nds/arm9/sdmmc.h>
+#include <nds/arm9/exceptions.h>
 #include <fat.h>
 #ifdef BUILD_DSI
 #include "../third_party/dsiwifi/include/dsiwifi9.h"
@@ -83,10 +85,11 @@ static void LogNocash(const char* msg, int len) {
 	nocashWrite(buffer, len + 2);
 }
 
-extern void consolePrintString(const char* ptr, int len);
+extern void Console_Clear(void);
+extern void Console_PrintString(const char* ptr, int len);
 void Platform_Log(const char* msg, int len) {
     LogNocash(msg, len);
-	consolePrintString(msg, len);
+	Console_PrintString(msg, len);
 }
 
 TimeMS DateTime_CurrentUTC(void) {
@@ -107,6 +110,63 @@ void DateTime_CurrentLocal(struct cc_datetime* t) {
 	t->hour   = loc_time.tm_hour;
 	t->minute = loc_time.tm_min;
 	t->second = loc_time.tm_sec;
+}
+
+
+/*########################################################################################################################*
+*-------------------------------------------------------Crash handling----------------------------------------------------*
+*#########################################################################################################################*/
+static const char* crash_msg;
+
+static __attribute__((noreturn)) void CrashHandler(void) {
+	Console_Clear();
+	Platform_LogConst("");
+	Platform_LogConst("");
+	Platform_LogConst("** CLASSICUBE FATALLY CRASHED **");
+	Platform_LogConst("");
+
+	cc_uint32 mode = getCPSR() & CPSR_MODE_MASK;
+	if (crash_msg) {
+		Platform_LogConst(crash_msg);
+	} else if (mode == CPSR_MODE_ABORT) {
+		Platform_LogConst("Read/write at invalid memory");
+	} else if (mode == CPSR_MODE_UNDEFINED) {
+		Platform_LogConst("Executed invalid instruction");
+	} else {
+		Platform_Log1("Unknown error: %h", &mode);
+	}
+	Platform_LogConst("");
+
+	static const char* const regNames[] = {
+		"R0 ", "R1 ", "R2 ", "R3 ", "R4 ", "R5 ", "R6 ", "R7 ",
+		"R8 ", "R9 ", "R10", "R11", "R12", "SP ", "LR ", "PC "
+	};
+
+	for (int r = 0; r < 8; r++) {
+		Platform_Log4("%c: %h    %c: %h",
+					regNames[r],     &exceptionRegisters[r],
+					regNames[r + 8], &exceptionRegisters[r + 8]);
+	}
+
+	Platform_LogConst("");
+	Platform_LogConst("Please report this on the       ClassiCube Discord or forums");
+	Platform_LogConst("");
+	Platform_LogConst("You will need to restart your DS");
+
+	// Make the background red since game over anyways
+	BG_PALETTE_SUB[16 * 16 - 1] = RGB15(31, 0, 0);
+	BG_PALETTE    [16 * 16 - 1] = RGB15(31, 0, 0);
+
+	for (;;) { }
+}
+
+void CrashHandler_Install(void) { 
+	setExceptionHandler(CrashHandler);
+}
+
+void Process_Abort2(cc_result result, const char* raw_msg) {
+	crash_msg = raw_msg;
+	CrashHandler();
 }
 
 
@@ -460,6 +520,25 @@ cc_result Socket_CheckWritable(cc_socket s, cc_bool* writable) {
 	return res;
 }
 
+static void LogWifiStatus(int status) {
+	switch (status) {
+		case ASSOCSTATUS_SEARCHING:
+			Platform_LogConst("Wifi: Searching.."); return;
+		case ASSOCSTATUS_AUTHENTICATING:
+			Platform_LogConst("Wifi: Authenticating.."); return;
+		case ASSOCSTATUS_ASSOCIATING:
+			Platform_LogConst("Wifi: Connecting.."); return;
+		case ASSOCSTATUS_ACQUIRINGDHCP:
+			Platform_LogConst("Wifi: Acquiring.."); return;
+		case ASSOCSTATUS_ASSOCIATED:
+			Platform_LogConst("Wifi: Connected successfully!"); return;
+		case ASSOCSTATUS_CANNOTCONNECT:
+			Platform_LogConst("Wifi: FAILED TO CONNECT"); return;
+		default: 
+			Platform_Log1("Wifi: status = %i", &status); return;
+	}
+}
+
 static void InitNetworking(void) {
 #ifdef BUILD_DSI
     if (!DSiWifi_InitDefault(INIT_ONLY)) {
@@ -481,12 +560,11 @@ static void InitNetworking(void) {
         int status = DSiWifi_AssocStatus();
 #else
         int status = Wifi_AssocStatus();
-#endif
+#endif	
+		LogWifiStatus(status);
         if (status == ASSOCSTATUS_ASSOCIATED) return;
-		Platform_Log1("STATUS: %i", &status);
 
         if (status == ASSOCSTATUS_CANNOTCONNECT) {
-            Platform_LogConst("Can't connect to WIFI"); 
 			net_supported = false; return;
         }
         swiWaitForVBlank();
@@ -501,7 +579,11 @@ static void InitNetworking(void) {
 *#########################################################################################################################*/
 void Platform_Init(void) {
 	cc_bool dsiMode = isDSiMode();
-	Platform_Log1("Running in %c mode", dsiMode ? "DSi" : "DS");
+#ifdef BUILD_DSI
+	Platform_Log1("Running in %c mode with DSi wifi", dsiMode ? "DSi" : "DS");
+#else
+	Platform_Log1("Running in %c mode with NDS wifi", dsiMode ? "DSi" : "DS");
+#endif
 
 	InitFilesystem();
     InitNetworking();

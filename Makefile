@@ -259,7 +259,11 @@ macclassic_68k:
 	$(MAKE) -f misc/macclassic/Makefile_68k
 macclassic_ppc:
 	$(MAKE) -f misc/macclassic/Makefile_ppc
-	
+amiga_68k:
+	$(MAKE) -f misc/amiga/Makefile_68k
+amiga_ppc:
+	$(MAKE) -f misc/amiga/Makefile_ppc
+
 clean:
 	$(RM) $(OBJECTS)
 
