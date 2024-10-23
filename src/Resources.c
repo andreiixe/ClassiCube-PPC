@@ -333,14 +333,21 @@ static void MusicAssets_CountMissing(void) {
 /*########################################################################################################################*
 *-----------------------------------------------------Music asset fetching -----------------------------------------------*
 *#########################################################################################################################*/
-CC_NOINLINE static int MusicAsset_Download(const char* hash) {
-	cc_string url; char urlBuffer[URL_MAX_SIZE];
+#include "ProxyPPC.h"
 
-	String_InitArray(url, urlBuffer);
-	String_Format3(&url, "http://pikaiixe.duckdns.org:5090/?url=https://resources.download.minecraft.net/%r%r/%c", //Proxy (non-SSL) --> Download from--> minecraft.net (SSL)
-					&hash[0], &hash[1], hash);
-	return Http_AsyncGetData(&url, 0);
+CC_NOINLINE static int MusicAsset_Download(const char* hash) {
+    cc_string url; 
+    char urlBuffer[URL_MAX_SIZE];
+
+    String_InitArray(url, urlBuffer);
+
+    String_Format3(&url, "https://resources.download.minecraft.net/%r%r/%c", &hash[0], &hash[1], hash);
+
+    ApplyProxyPPC(&url);
+
+    return Http_AsyncGetData(&url, 0);
 }
+
 
 static void MusicAssets_DownloadAssets(void) {
 	int i;
