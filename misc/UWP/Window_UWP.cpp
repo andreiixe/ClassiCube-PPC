@@ -30,6 +30,7 @@ using namespace Windows::UI::Input;
 #include "../../src/Options.h"
 #include "../../src/Errors.h"
 #include "../../src/Graphics.h"
+#include "../../src/Game.h"
 #define UWP_STRING(str) ((wchar_t*)(str)->uni)
 
 
@@ -146,6 +147,10 @@ static void ShowDialogCore(const char* title, const char* msg) {
 static cc_result OpenSaveFileDialog(const cc_string* filters, FileDialogCallback callback, cc_bool load,
 									const char* const* fileExts, const cc_string* defaultName) {
 	return ERR_NOT_SUPPORTED;
+	//auto picker = Windows::Storage::Pickers::FileOpenPicker();
+	//picker.FileTypeFilter().Append(hstring(L".jpg"));
+
+	//Windows::Storage::StorageFile file = picker->PickSingleFileAsync();
 }
 
 cc_result Window_OpenFileDialog(const struct OpenFileDialogArgs* args) {
@@ -210,8 +215,12 @@ void Window_AllocFramebuffer(struct Bitmap* bmp, int width, int height) {
 	bmp->height = height;
 
 	if (!Gfx.Created) Gfx_Create();
-	fb_tex = Gfx_CreateTexture(bmp, TEXTURE_FLAG_NONPOW2, false);
+	fb_tex = Gfx_AllocTexture(bmp, bmp->width, TEXTURE_FLAG_NONPOW2, false);
 	AllocateVB();
+
+	Game.Width  = Window_Main.Width;
+	Game.Height = Window_Main.Height;
+	Gfx_OnWindowResize();
 }
 
 void Window_DrawFramebuffer(Rect2D r, struct Bitmap* bmp) {
@@ -273,13 +282,6 @@ void Window_DisableRawMouse(void) {
 	DefaultDisableRawMouse();
 }
 
-
-void OpenFileDialog(void) {
-    auto picker = Windows::Storage::Pickers::FileOpenPicker();
-    //picker.FileTypeFilter().Append(hstring(L".jpg"));
-
-    //Windows::Storage::StorageFile file = picker->PickSingleFileAsync();
-}
 
 struct CCApp : implements<CCApp, IFrameworkViewSource, IFrameworkView>
 {
