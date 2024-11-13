@@ -1,6 +1,6 @@
-#include <stdio.h>   // Pentru fopen, fgets, fclose
-#include <stdlib.h>  // Pentru malloc, free
-#include <string.h>  // Pentru strlen, strcpy, strcat
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include <stdbool.h>
 #include "ProxyPPC.h"
 
@@ -35,13 +35,8 @@ bool ReadProxyConfig(char* proxyPrefix, size_t bufferSize, bool* useProxy) {
             if (len > 0 && proxyPrefix[len - 1] == '\n') {
                 proxyPrefix[len - 1] = '\0';
             }
-        }
-        else if (strncmp(line, "Proxy_online=", 13) == 0) {
-            if (strncmp(line + 13, "True", 4) == 0) {
-                *useProxy = true;
-            } else {
-                *useProxy = false;
-            }
+        } else if (strncmp(line, "Proxy_online=", 13) == 0) {
+            *useProxy = (strncmp(line + 13, "True", 4) == 0);
         }
     }
 
@@ -63,18 +58,16 @@ void ApplyProxyPPC(cc_string* url) {
         return;
     }
 
-    // Calculam noua lungime pentru URL
-    size_t newLength = url->length + strlen(proxyPrefix);
-    char* newBuffer = (char*)malloc(newLength + 1);
-    if (newBuffer == NULL) {
+    size_t proxyPrefixLength = strlen(proxyPrefix);
+    size_t originalUrlLength = url->length;
+    size_t newLength = proxyPrefixLength + originalUrlLength;
+
+    if (newLength >= URL_MAX_SIZE) {
         return;
     }
 
-    strcpy(newBuffer, proxyPrefix);
-    strcat(newBuffer, url->buffer);
+    memmove(url->buffer + proxyPrefixLength, url->buffer, originalUrlLength + 1);
+    memcpy(url->buffer, proxyPrefix, proxyPrefixLength);
 
-    free(url->buffer);
-    url->buffer = newBuffer;
     url->length = newLength;
 }
-

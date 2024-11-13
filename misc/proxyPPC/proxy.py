@@ -1,74 +1,109 @@
-from flask import Flask, request, jsonify, Response
+from flask import Flask, request, jsonify, Response, render_template_string
 import requests
 import threading
 import time
-import pickle
-import os
 from dateutil import parser
 
 app = Flask(__name__)
 
-CACHE_FILE = 'cache.pkl'
-CACHE_TTL = 2 * 3600
-UPDATE_INTERVAL = 24 * 3600
 RELEASE_URL = 'https://api.github.com/repos/andreiixe/ClassiCube-PPC/releases/latest'
-
 latest_release = {"release_ts": 0, "release_version": ""}
-cache_lock = threading.Lock()
+active_downloads = {}
 
-def cache_get(url):
-    print(f"Cache get request for URL: {url}")
-    if os.path.exists(CACHE_FILE):
-        with open(CACHE_FILE, 'rb') as f:
-            cache = pickle.load(f)
-            cached_time, cached_data = cache.get(url, (0, None))
-            if time.time() - cached_time < CACHE_TTL:
-                print("Cache valid.")
-                return cached_data
-            else:
-                print("Cache expired.")
-    print("Cache miss.")
-    return None
-
-def cache_set(url, data):
-    print(f"Cache set for URL: {url}")
-    cache = {}
-    if os.path.exists(CACHE_FILE):
-        with open(CACHE_FILE, 'rb') as f:
-            cache = pickle.load(f)
-    cache[url] = (time.time(), data)
-    with open(CACHE_FILE, 'wb') as f:
-        pickle.dump(cache, f)
-    print("Cache updated.")
+STATUS_PAGE = """
+<!doctype html>
+<html>
+<head>
+    <title>Status PPCProxy ClassiCube</title>
+    <style>
+        .progress-container {
+            width: 100%;
+            background-color: #e0e0e0;
+            border-radius: 5px;
+            overflow: hidden;
+            margin: 20px 0;
+        }
+        .progress-bar {
+            height: 25px;
+            background-color: #76c7c0;
+            text-align: center;
+            color: white;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <h1>Status</h1>
+    <p>Last release: ClassiCube-PPC {{ latest_release['release_version'] }}</p>
+    <p>Proxy PPC version: 1.6</p>
+    
+    <h2>Download Now: {{ active_downloads|length }} users</h2>
+    <div class="progress-container">
+        <div class="progress-bar" style="width: {{ active_downloads|length * 10 }}%;">
+            {{( active_downloads|length) }}
+        </div>
+    </div>
+    
+    <h2>Ping curent: {{ current_ping }} ms</h2>
+    <div class="progress-container">
+        <div class="progress-bar" style="width: {{ adjusted_ping }}%;">
+            {{(current_ping // 10) }}{{(10 - (current_ping // 10)) }}
+        </div>
+    </div>
+</body>
+</html>
+"""
 
 @app.route('/client/builds.json', methods=['GET'])
 def handle_builds_json():
-    print("Handling /client/builds.json request")
     return jsonify(latest_release)
 
 @app.route('/', methods=['GET'])
 def handle_forward_request():
     target_url = request.args.get('url')
     if target_url:
-        print(f"Forwarding request to {target_url}")
+        ip = request.remote_addr
+        active_downloads[ip] = time.time()  
+        
         try:
-            response = requests.get(target_url, stream=True, timeout=(10, 30))
-            return Response(response.iter_content(chunk_size=8192),
-                            content_type=response.headers.get('Content-Type', 'application/octet-stream'),
-                            status=response.status_code)
+            response = requests.get(target_url, timeout=(5, 10))
+            response.raise_for_status()
+            
+            return Response(
+                response.content,
+                content_type=response.headers.get('Content-Type', 'application/octet-stream'),
+                status=response.status_code
+            )
         except requests.RequestException as e:
-            print(f"Exception occurred: {e}")
             return Response(f"Error fetching the requested URL: {e}", status=500)
     return Response("Unsupported request", status=400)
 
+@app.route('/status', methods=['GET'])
+def status_page():
+    global active_downloads  
+    current_ping = 50  
+    adjusted_ping = min(current_ping, 100)
+    
+    timeout = 10  
+    current_time = time.time()
+    active_downloads_filtered = {ip: ts for ip, ts in active_downloads.items() if current_time - ts < timeout}
+    
+    active_downloads = active_downloads_filtered
+    
+    return render_template_string(
+        STATUS_PAGE,
+        latest_release=latest_release,
+        active_downloads=active_downloads,
+        current_ping=current_ping,
+        adjusted_ping=adjusted_ping 
+    )
+
 def fetch_latest_release():
     global latest_release
-    print(f"Fetching latest release from GitHub.")
     try:
         response = requests.get(RELEASE_URL)
         response.raise_for_status()
         release_data = response.json()
-        
         tag_name = release_data.get('tag_name', '')
         published_at = release_data.get('published_at', '')
         
@@ -82,19 +117,10 @@ def fetch_latest_release():
             "release_ts": release_ts,
             "release_version": tag_name
         }
-        print(f"Latest release fetched: {latest_release}")
     except requests.RequestException as e:
         print(f"Error fetching release data: {e}")
 
-def refresh_cache():
-    while True:
-        time.sleep(UPDATE_INTERVAL)
-        fetch_latest_release()
-        print("Cache refreshed.")
-
 if __name__ == '__main__':
     threading.Thread(target=fetch_latest_release, daemon=True).start()
-    threading.Thread(target=refresh_cache, daemon=True).start()
-    
     port = 5090
     app.run(host='0.0.0.0', port=port)
