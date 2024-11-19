@@ -6,7 +6,7 @@ Copyright 2014-2023 ClassiCube | Licensed under BSD-3
 */
 
 #define GAME_MAX_CMDARGS 5
-#define GAME_APP_VER "1.3.7rev2-PPC"
+#define GAME_APP_VER "1.3.7rev3-PPC"
 #define GAME_API_VER 1
 
 #if defined CC_BUILD_WEB
@@ -14,8 +14,8 @@ Copyright 2014-2023 ClassiCube | Licensed under BSD-3
 #define GAME_APP_NAME  "ClassiCube 1.3.7 web"
 #define GAME_APP_TITLE "ClassiCube-PPC"
 #else
-#define GAME_APP_NAME  "ClassiCube 1.3.7rev2-PPC"
-#define GAME_APP_TITLE "ClassiCube 1.3.7rev2-PPC"
+#define GAME_APP_NAME  "ClassiCube 1.3.7rev3-PPC"
+#define GAME_APP_TITLE "ClassiCube 1.3.7rev3-PPC"
 #endif
 
 /* Max number of characters strings can have. */
