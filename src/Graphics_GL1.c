@@ -7,9 +7,10 @@
 #include "_GraphicsBase.h"
 #include "Errors.h"
 #include "Window.h"
-#ifdef CC_BUILD_WIN
-	#define CC_BUILD_GL11_FALLBACK
+#ifdef CC_BUILD_MACOS
+    #define CC_BUILD_GL11_FALLBACK
 #endif
+
 
 /* The OpenGL backend is a bit of a mess, since it's really 2 backends in one:
  * - OpenGL 1.1 (completely lacking GPU, fallbacks to say Windows built-in software rasteriser)
@@ -663,9 +664,9 @@ static void APIENTRY gl11_vertexPointer(GLint size, GLenum type, GLsizei stride,
 
 static void FallbackOpenGL(void) {
 	Window_ShowDialog("Performance warning",
-		"Your system only supports only OpenGL 1.1\n" \
-		"This is usually caused by graphics drivers not being installed\n\n" \
-		"As such you will likely experience very poor performance");
+		"Your graphics card only supports OpenGL 1.1\n" \
+		"This is caused by graphics cards from older PPC systems\n\n" \
+		"As such you will likely experience poor performance");
 	customMipmapsLevels = false;
 		
 	_glGenBuffers    = legacy_genBuffer;
@@ -700,7 +701,7 @@ static void FallbackOpenGL(void) {
 /* No point in even trying for other systems */
 static void FallbackOpenGL(void) {
 	Logger_FailToStart("Only OpenGL 1.1 supported.\n\n" \
-		"Compile the game with CC_BUILD_GL11, or ask on the ClassiCube forums for it");
+		"If it doesn't work, add me on Discord 'Andreiixe' or send me an email at akaiandrei825@gmail.com with the issue you're facing.");
 }
 #endif
 
