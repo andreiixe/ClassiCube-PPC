@@ -30,6 +30,7 @@
 #include <stdio.h>
 #include <poll.h>
 #include <netdb.h>
+#include <malloc.h>
 #include <coreinit/debug.h>
 #include <coreinit/event.h>
 #include <coreinit/fastmutex.h>
@@ -180,7 +181,7 @@ static cc_result File_Do(cc_file* file, const char* path, int mode) {
 }
 
 cc_result File_Open(cc_file* file, const cc_filepath* path) {
-	return File_Do(file, path, O_RDONLY);
+	return File_Do(file, path->buffer, O_RDONLY);
 }
 cc_result File_Create(cc_file* file, const cc_filepath* path) {
 	return File_Do(file, path->buffer, O_RDWR | O_CREAT | O_TRUNC);
@@ -237,7 +238,7 @@ void Thread_Run(void** handle, Thread_StartFunc func, int stackSize, const char*
 	void* stack = memalign(16, stackSize);
 	
 	OSCreateThread(thread, ExecThread,
-                       1, (Thread_StartFunc)func,
+                       1, (void*)func,
                        stack + stackSize, stackSize,
                        16, OS_THREAD_ATTRIB_AFFINITY_ANY);
 
