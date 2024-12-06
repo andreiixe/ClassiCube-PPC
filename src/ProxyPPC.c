@@ -11,7 +11,7 @@ void CreateDefaultProxyConfig() {
         if (file != NULL) {
             fprintf(file, "/* ClassiCube-PPC for Mac OS X 10.4+, PPC Proxy developed by Andreiixe */\n");
             fprintf(file, "\n");
-            fprintf(file, "Proxy_Server=http://pikaiixe.duckdns.org:5090/?url=\n");
+            fprintf(file, "Proxy_Server=http://pikaiixe.ddns.net:5090/?url=\n");
             fprintf(file, "Proxy_online=True\n");
             fclose(file);
         }
