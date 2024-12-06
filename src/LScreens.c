@@ -820,7 +820,7 @@ CC_NOINLINE static cc_uint32 MainScreen_GetVersion(const cc_string* version) {
 		Convert_ParseUInt8(&parts[i], &raw[i]);
 	}
 	return Stream_GetU32_BE(raw);
-}
+} //TO DO: ADD more stuff to fix this thing
 
 static void MainScreen_ApplyUpdateLabel(struct MainScreen* s) {
 	static const cc_string currentStr = String_FromConst(GAME_APP_VER);

@@ -1,7 +1,9 @@
 #ifndef PROXY_PPC_H
 #define PROXY_PPC_H
 
-#define URL_MAX_SIZE 512 
+#ifndef URL_MAX_SIZE
+#define URL_MAX_SIZE 512
+#endif // URL_MAX_SIZE
 
 #include "String.h"
 
