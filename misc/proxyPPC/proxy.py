@@ -9,7 +9,7 @@ app = Flask(__name__)
 RELEASE_URL = 'https://api.github.com/repos/andreiixe/ClassiCube-PPC/releases/latest'
 latest_release = {"release_ts": 0, "release_version": ""}
 active_downloads = {}
-total_downloaded_bytes = 0  # All dowload files in bytes
+total_downloaded_bytes = 0  # All download files in bytes
 
 @app.route('/status', methods=['GET'])
 def status_page():
@@ -20,16 +20,16 @@ def status_page():
     active_downloads_filtered = {ip: ts for ip, ts in active_downloads.items() if current_time - ts < timeout}
     active_downloads = active_downloads_filtered
 
-    # Calculate data donloaded
+    # Calculate data downloaded
     if total_downloaded_bytes >= 1_000_000_000:
         total_downloaded = f"{total_downloaded_bytes / 1_000_000_000:.2f} GB"
     else:
         total_downloaded = f"{total_downloaded_bytes / 1_000_000:.2f} MB"
 
-    # Json data
+    # JSON data
     return jsonify({
         "latest_release_version": latest_release.get("release_version", "N/A"),
-        "proxy_version": "1.6.1",
+        "proxy_version": "1.6.2",
         "active_downloads": len(active_downloads),
         "total_downloaded": total_downloaded
     })
@@ -61,8 +61,9 @@ def handle_forward_request():
 
 @app.route('/client/builds.json', methods=['GET'])
 def handle_builds_json():
+    global latest_release
+    fetch_latest_release()  # Fetch the latest release data every time the endpoint is accessed
     return jsonify(latest_release)
-
 
 def fetch_latest_release():
     global latest_release
@@ -87,6 +88,5 @@ def fetch_latest_release():
         print(f"Error fetching release data: {e}")
 
 if __name__ == '__main__':
-    threading.Thread(target=fetch_latest_release, daemon=True).start()
     port = 5090
     app.run(host='0.0.0.0', port=port)
